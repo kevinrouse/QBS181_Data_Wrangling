@@ -14,5 +14,11 @@ library(tidyverse)
 setwd('/Volumes/GoogleDrive/Mon disque/wrangling/project/wranglinghub')
 
 data <- read_csv('football_data.csv')
+head(data)
+```
+
+MISSING DATA
+```{r}
+summary(data)
 ```
 
