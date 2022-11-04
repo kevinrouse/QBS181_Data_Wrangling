@@ -1,0 +1,154 @@
+---
+title: "Joe QBS181 Project Code"
+author: "Joe Gyorda"
+date: "2022-11-03"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library(car)
+library(MuMIn)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+```{r Read Data}
+setwd('/users/joegyorda/Desktop/wranglinghub')
+football_data = read.csv('Merged_Stadium.csv')
+```
+
+
+```{r Filter Data}
+# for now, we'll only focus on games where there was a spread
+
+# a good next wrangling task would be to replace old team names with new team names
+# e.g., Baltimore Colts --> Indianapolis Colts
+# ^^or maybe not, depends on the question
+sort(unique(football_data$team_home))
+
+# remove missing values! just remove all for now
+# football_data_filter = football_data[complete.cases(football_data),]
+football_data_filter = football_data %>% drop_na(spread_favorite)
+
+sum(is.na(football_data$spread_favorite))
+```
+
+```{r Assess Spread Over Time}
+# how often is the spread correct (for each team)?
+# comment out group_by for overall, otherwise gives each team's breakdown
+football_data_filter %>% 
+  group_by(team_home) %>%
+  summarise(Spread_Correct=sum(Actual.difference...spread==0)/
+              length(Actual.difference...spread) * 100) %>% 
+  arrange(desc(Spread_Correct))
+
+# how often does favored team outperform spread (for each team)?
+# comment out group_by for overall, otherwise gives each team's breakdown
+football_data_filter %>% 
+  group_by(team_home) %>% 
+  summarise(Over_Spread=sum(Actual.difference...spread>0)/
+              length(Actual.difference...spread) * 100) %>% 
+  arrange(desc(Over_Spread))
+
+# how often does favored team underperform spread (for each team)?
+# comment out group_by for overall, otherwise gives each team's breakdown
+football_data_filter %>% 
+  group_by(team_home) %>% 
+  summarise(Under_Spread=sum(Actual.difference...spread<0)/
+              length(Actual.difference...spread) * 100) %>% 
+  arrange(desc(Under_Spread))
+
+# combine all into 1
+spread_breakdown = football_data_filter %>% 
+  group_by(team_home) %>% 
+  summarise(Over_Spread=sum(Actual.difference...spread>0)/
+              length(Actual.difference...spread) * 100,
+            Under_Spread=sum(Actual.difference...spread<0)/
+              length(Actual.difference...spread) * 100,
+            Spread_Correct=sum(Actual.difference...spread==0)/
+              length(Actual.difference...spread) * 100) %>% 
+  gather(SpreadType, Percent, Over_Spread:Spread_Correct)
+  
+ggplot(data=spread_breakdown,aes(team_home,fill=SpreadType)) + 
+  geom_bar(aes(weight=Percent),position="stack") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylab("Percent") +
+  geom_text(position="stack",aes(team_home,Percent+1,label=round(Percent,1)),size=2) +
+  ggtitle("Accuracy of Spread Across NFL History for Each NFL Team")
+```
+
+
+```{r Assess how accurate spread is over time}
+spread_score_diff_over_time = football_data_filter %>% 
+  group_by(schedule_season) %>% 
+  summarise(Avg_Diff=mean(Actual.difference...spread),SD_Diff=sd(Actual.difference...spread),
+            Med_Diff=median(Actual.difference...spread))
+
+spread_score_diff_over_time
+
+ggplot(data=spread_score_diff_over_time, aes(x=schedule_season, y=Avg_Diff)) +
+  geom_line()+
+  geom_point()+
+  geom_hline(yintercept=0, linetype='dotted', col = 'red') +
+  geom_line(aes(y = (Avg_Diff+SD_Diff)), color="steelblue", linetype="twodash") +
+  geom_line(aes(y = (Avg_Diff-SD_Diff)), color="steelblue", linetype="twodash") 
+```
+```{r Assess normality of outcome for regression}
+par(mfrow=c(1,3))
+hist(football_data_filter$Actual.difference...spread)
+boxplot(football_data_filter$Actual.difference...spread)
+qqPlot(football_data_filter$Actual.difference...spread)
+# outcome looks normal!
+```
+
+
+```{r Implement Mixed Model}
+
+# how important are weather, location, field type, etc to covering the spread? how do 
+# these predictors differ by team?
+
+# the outcome variable is actual difference - spread
+# this variable takes the difference b/w the real game score difference, and 
+# the predicted difference (spread)
+# positive value means favored team outperformed spread, negative means favored
+# team underperformed the spread, and 0 means spread was correct
+
+# makes it easier to generate predictions later
+football_data_complete = football_data_filter[complete.cases(football_data_filter),]
+
+mod1 = lmer(`Actual.difference...spread`~ weather_temperature + weather_wind_mph + 
+              weather_humidity + schedule_season + schedule_week + weather_detail + schedule_playoff +
+              stadium_type + stadium_weather_type + stadium_surface + Abs.value.of.spread 
+            + as.numeric(ELEVATION) +
+              (1|schedule_season) + (schedule_season|team_favorite_id),
+            data=football_data_complete)
+
+sum1 = summary(mod1)
+sum1
+r_sq = r.squaredGLMM(mod1)
+
+# sum1$coefficients
+random_effects = ranef(mod1)
+
+
+plot(mod1)
+
+library(sjPlot)
+sjPlot::plot_model(mod1)
+sjPlot::tab_model(mod1)
+# sjPlot::plot_residuals(mod1)
+
+preds = predict(mod1) 
+
+plot(football_data_complete$Actual.difference...spread, preds)
+summary(lm(football_data_complete$Actual.difference...spread~preds))
+```
+
+
+```{r Correlations between things?}
+cor(football_data_filter[,c(22,2,12,13,16,17,18)],use = "complete.obs")
+```
+
