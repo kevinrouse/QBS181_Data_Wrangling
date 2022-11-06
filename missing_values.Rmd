@@ -21,4 +21,15 @@ MISSING DATA
 ```{r}
 summary(data)
 ```
+```{r}
+data_missing <- data
+library(naniar)
+gg_miss_var(data_missing)
+
+```
+
+```{r}
+library(VIM)
+matrixplot(data_missing) 
+```
 
