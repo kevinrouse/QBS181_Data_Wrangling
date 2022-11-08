@@ -21,6 +21,9 @@ MISSING DATA
 ```{r}
 summary(data)
 ```
+
+
+
 ```{r}
 data_missing <- data
 library(naniar)
@@ -29,7 +32,159 @@ gg_miss_var(data_missing)
 ```
 
 ```{r}
-library(VIM)
-matrixplot(data_missing) 
+library(naniar)
+vis_miss(data_missing) 
+```
+
+```{r}
+library(naniar)
+
+# mcar_test(data.frame(data)) # this runs into an error, but we can subset the data by columns and 
+# run an mcar test on just a portion of the data
+
+# this confirms that the data is missing not a random
+mcar_test(data.frame(data[,10:20])) 
+```
+
+```{r}
+library(naniar)
+
+gg_miss_fct(x = data_missing, fct = schedule_season) 
+# a lot of missing data related to betting up until near 1978
+# some missing data in the 2023 season, where the authors of the dataset pre-filled data for some games that haven't been played yet.
+
+
+```
+Evidently, there is a pattern in our missing data. We have 100% missing data in the earlier football seasons. This makes sense because when football first emerged, betting was not yet available
+
+```{r}
+pct_miss(data)
+betting_columns <- c("team_favorite_id",
+                     "spread_favorite",
+                     "over_under_line",
+                     "Difference_favored_minus_notfavored",
+                     "Actual difference - spread",
+                     "Abs value of spread")
+pct_miss(data[,betting_columns]) # 20.34%
+pct_miss(data[, -which(colnames(data) %in% betting_columns)])
+```
+
+Looking at the data in excel, our regular season betting data begins at row 2494 (2493 if we do not include the header).
+
+```{r}
+
+pct_miss(data[1:2492,betting_columns])
+pct_miss(data[2493:13248,betting_columns])
+pct_miss(data[13249:nrow(data),betting_columns])
+
+```
+
+# WEATHER
+
+```{r}
+# weather_temperature
+# weather_wind_mph
+# weather_humidity
+
+# stadium_weather_type
+# stadium_surface
+
+# Actual difference - spread
+
+betting_data <- data[2493:13248,]
+
+
+```
+
+Playing surface:
+```{r}
+table(as.factor(data$stadium_surface))
+
+surface_data <- filter(betting_data, 
+                       stadium_surface=='FieldTurf' |
+                         stadium_surface=='Hellas Matrix Turf' |
+                         stadium_surface=='Grass')
+
+ggplot(data=surface_data, aes(x=stadium_surface, y=`Actual difference - spread`, color=stadium_surface, fill=stadium_surface)) +
+  geom_boxplot() +
+  # geom_jitter(width=0.05, aes(color=stadium_surface)) +
+  labs(title="Accuracy of the spread vs stadium surface played on") +
+  theme_light() +
+  theme(legend.position="none", text = element_text(family = "mono", size=12)) +
+  scale_fill_manual(values = c("#ffffcc", "#a1dab4", "#41b6c4")) +
+  scale_color_manual(values = c("#a1dab4", "#41b6c4", "#2c7fb8"))
+
+```
+
+```{r}
+table(betting_data$stadium_weather_type)
+
+ggplot(data=betting_data, aes(x=stadium_weather_type, y=`Actual difference - spread`, color=stadium_weather_type, fill=stadium_weather_type)) +
+  geom_violin() +
+  geom_boxplot(width=0.1) +
+  # geom_jitter(width=0.05, aes(color=stadium_weather_type)) +
+  labs(title="Accuracy of the spread vs weather type at the stadium") +
+  theme_light() +
+  theme(legend.position="none", text = element_text(family = "mono", size=12)) +
+  scale_fill_manual(values = c("#ffffcc", "#a1dab4", "#41b6c4", "#225ea8")) +
+  scale_color_manual(values = c("#a1dab4", "#41b6c4", "#2c7fb8", "#253494"))
+
+```
+
+Temperature
+```{r}
+# weather_temperature
+# weather_wind_mph
+# weather_humidity
+domed_stadiums <- filter(betting_data, 
+                       stadium_weather_type=='dome')
+
+non_domed_stadiums <- filter(betting_data, 
+                       stadium_weather_type=='cold' |
+                         stadium_weather_type=='moderate' |
+                         stadium_weather_type=='warm')
+
+summary(non_domed_stadiums$weather_temperature) # 50,64,72
+summary(non_domed_stadiums$weather_wind_mph) # 0, 7, 11
+summary(non_domed_stadiums$weather_humidity) # 56, 68, 78
+# new values (when removing domed stadiums):
+# 45, 57, 67.5
+# 6, 9, 12
+# 57, 69, 78
+
+ggplot(non_domed_stadiums, aes(x=weather_temperature, y=`Actual difference - spread`)) +
+  geom_point()
+
+ggplot(non_domed_stadiums, aes(x=weather_wind_mph, y=`Actual difference - spread`)) +
+  geom_point()
+  
+ggplot(non_domed_stadiums, aes(x=weather_humidity, y=`Actual difference - spread`)) +
+  geom_point()
+```
+
+Categorical weather:
+```{r}
+bad_weather_days <- filter(betting_data, 
+                    stadium_weather_type != 'dome' &
+                      weather_temperature <= 45 &
+                      weather_wind_mph >= 12)
+                      
+weather_status <- ifelse(betting_data$stadium_weather_type != 'dome' &
+                  betting_data$weather_temperature <= 45 &
+                  betting_data$weather_wind_mph >= 12, 
+                  'Bad weather', 'Good weather')
+
+data_weather_categorized <- add_column(betting_data, weather_status)
+
+ggplot(data=data_weather_categorized, aes(x=weather_status, y=`Actual difference - spread`, color=weather_status, fill=weather_status)) +
+  geom_violin() +
+  geom_boxplot(width=0.1) +
+  # geom_jitter(width=0.05, aes(color=stadium_weather_type)) +
+  labs(title="Accuracy of the spread vs weather type at the stadium") +
+  theme_light() +
+  theme(legend.position="none", text = element_text(family = "mono", size=12)) +
+  scale_fill_manual(values = c("#ffffcc", "#a1dab4")) +
+  scale_color_manual(values = c("#a1dab4", "#41b6c4"))
+
 ```
 
