@@ -1,5 +1,5 @@
 ---
-title: "Wrangling Project"
+title: "Visualization of Missing Values and the Effect of Different Weather Variables"
 author: "Anton Hung"
 date: "2022-11-01"
 output: pdf_document
@@ -9,6 +9,12 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r loading functions from a separate r script}
+setwd('/Volumes/GoogleDrive/Mon disque/wrangling/project/wranglinghub')
+source('functions_library/functions_library.R')
+```
+
+Loading the data
 ```{r}
 library(tidyverse)
 setwd('/Volumes/GoogleDrive/Mon disque/wrangling/project/wranglinghub')
@@ -22,13 +28,14 @@ MISSING DATA
 summary(data)
 ```
 
-
+Visualizing which columns have missing data. "weather_detail" has the most missing values by far. This variable contains 8 factors: "DOME", "DOME (Open Roof)", "Fog", "Rain", "Rain | Fog", "Snow", "Snow | Fog", and "Snow | Freezing Rain". All of these factors are related to poor weather, or dome-related changes. Values were not recorded for "nice" weather, which is probably contributing to the large amount of missing values. To proceed, we simply decided not to use this column in our analysis. There were many other weather-related columns available in the dataset. 
 
 ```{r}
 data_missing <- data
 library(naniar)
 gg_miss_var(data_missing)
 
+# levels(as.factor(data_missing$weather_detail))
 ```
 
 ```{r}
@@ -98,36 +105,16 @@ betting_data <- data[2493:13248,]
 
 Playing surface:
 ```{r}
-table(as.factor(data$stadium_surface))
+table(as.factor(betting_data$stadium_surface))
 
-surface_data <- filter(betting_data, 
-                       stadium_surface=='FieldTurf' |
-                         stadium_surface=='Hellas Matrix Turf' |
-                         stadium_surface=='Grass')
-
-ggplot(data=surface_data, aes(x=stadium_surface, y=`Actual difference - spread`, color=stadium_surface, fill=stadium_surface)) +
-  geom_boxplot() +
-  # geom_jitter(width=0.05, aes(color=stadium_surface)) +
-  labs(title="Accuracy of the spread vs stadium surface played on") +
-  theme_light() +
-  theme(legend.position="none", text = element_text(family = "mono", size=12)) +
-  scale_fill_manual(values = c("#ffffcc", "#a1dab4", "#41b6c4")) +
-  scale_color_manual(values = c("#a1dab4", "#41b6c4", "#2c7fb8"))
+plot_playing_surface(betting_data)
 
 ```
 
 ```{r}
 table(betting_data$stadium_weather_type)
 
-ggplot(data=betting_data, aes(x=stadium_weather_type, y=`Actual difference - spread`, color=stadium_weather_type, fill=stadium_weather_type)) +
-  geom_violin() +
-  geom_boxplot(width=0.1) +
-  # geom_jitter(width=0.05, aes(color=stadium_weather_type)) +
-  labs(title="Accuracy of the spread vs weather type at the stadium") +
-  theme_light() +
-  theme(legend.position="none", text = element_text(family = "mono", size=12)) +
-  scale_fill_manual(values = c("#ffffcc", "#a1dab4", "#41b6c4", "#225ea8")) +
-  scale_color_manual(values = c("#a1dab4", "#41b6c4", "#2c7fb8", "#253494"))
+plot_stadium_weather(betting_data)
 
 ```
 
@@ -164,27 +151,7 @@ ggplot(non_domed_stadiums, aes(x=weather_humidity, y=`Actual difference - spread
 
 Categorical weather:
 ```{r}
-bad_weather_days <- filter(betting_data, 
-                    stadium_weather_type != 'dome' &
-                      weather_temperature <= 45 &
-                      weather_wind_mph >= 12)
-                      
-weather_status <- ifelse(betting_data$stadium_weather_type != 'dome' &
-                  betting_data$weather_temperature <= 45 &
-                  betting_data$weather_wind_mph >= 12, 
-                  'Bad weather', 'Good weather')
-
-data_weather_categorized <- add_column(betting_data, weather_status)
-
-ggplot(data=data_weather_categorized, aes(x=weather_status, y=`Actual difference - spread`, color=weather_status, fill=weather_status)) +
-  geom_violin() +
-  geom_boxplot(width=0.1) +
-  # geom_jitter(width=0.05, aes(color=stadium_weather_type)) +
-  labs(title="Accuracy of the spread vs weather type at the stadium") +
-  theme_light() +
-  theme(legend.position="none", text = element_text(family = "mono", size=12)) +
-  scale_fill_manual(values = c("#ffffcc", "#a1dab4")) +
-  scale_color_manual(values = c("#a1dab4", "#41b6c4"))
+plot_weather_status(betting_data)
 
 ```
 
