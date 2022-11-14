@@ -13,11 +13,12 @@ library(tm)
 #install.packages("wordcloud2")
 #library(wordcloud2)
 
-
+# Visualize team_home
 team_home <- merged_teams$team_home
 team_home <- Corpus(VectorSource(team_home))
-
+# Create a new blank canvas for word cloud plot
 dev.new(width = 2000, height = 2000, unit = "px")
+# Word cloud plot
 wordcloud(team_home
           , scale=c(5,0.5)     # Set min and max scale
           , max.words=100      # Set top n words
@@ -28,7 +29,7 @@ wordcloud(team_home
 
 
 
-
+# Visualize stadium
 stadium <- read.csv("/Users/william/Library/Mobile Documents/com~apple~CloudDocs/QBS 181/stadium.csv")
 # remove Stadium, Filed, Bowl, County, Memorial, Municipal, Coliseum, Dome, Superdome, Metrodome, Silverdome in Excel
 stadium <- Corpus(VectorSource(stadium$stadium))
@@ -44,7 +45,7 @@ wordcloud(stadium
           , colors=brewer.pal(8, "Dark2"))
 
 
-
+# Visualiaze team_away
 team_away <- merged_teams$team_away
 team_away <- Corpus(VectorSource(team_away))
 
@@ -58,7 +59,7 @@ wordcloud(team_away
           , colors=brewer.pal(8, "Dark2"))
 
 
-
+# Visualiaze stadium_address
 stadium_address <-  merged_teams$stadium_address
 stadium_address <- Corpus(VectorSource(stadium_address))
 # Convert to lowercase
