@@ -1,0 +1,369 @@
+---
+title: "Joe QBS181 Project Code"
+author: "Joe Gyorda"
+date: "2022-11-03"
+output: pdf_document
+---
+## Description of Code
+This Markdown file contains the code for the analyses prepared by Joe Gyorda as part of a final project group project for QBS 181 at Dartmouth College, taught by Carly Bobak in the Fall of 2022. The project examined trends in NFL sports betting data over time, and in this Markdown, I attempted to develop visualizations and predictive models for the difference in the actual game scores of NFL games and the predicted score (called the spread). This file is outlined as follows:
+  
+  Section 1. Visual analyses
+  
+  Section 2. Linear mixed model
+  
+  Section 3. Network model
+  
+  Section 4. Scrap code for classification model
+  
+## Section 1 - Visual analyses
+```{r load libraries and setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library(car)
+library(MuMIn)
+library(tidyverse)
+library(ggplot2)
+library(sjPlot)
+library(igraph)
+library(fields)
+```
+
+
+```{r Read Data}
+setwd('/users/joegyorda/Desktop/wranglinghub')
+football_data = read.csv('Merged_Stadium.csv')
+```
+
+
+```{r Filter Data}
+# for now, we'll only focus on games where there was a spread
+
+# what are the unique home teams?
+sort(unique(football_data$team_home))
+
+# how many missing values
+sum(is.na(football_data$spread_favorite))
+
+# remove missing values! just remove all for now
+# football_data_filter = football_data[complete.cases(football_data),]
+football_data_filter = football_data %>% drop_na(spread_favorite)
+
+# should be 0!
+sum(is.na(football_data_filter$spread_favorite))
+```
+
+This block uses dplyr to calculate, for each NFL team (when they were the team favored to win), how often the spread was correct, as well as how often the spread was larger/outperformed and smaller/underperformed. The resulting tibbles were combined into one, which was used to create a barplot with ggplot.
+```{r Assess Spread Over Time}
+# how often is the spread correct (for each team)?
+# comment out group_by for overall, otherwise gives each team's breakdown
+football_data_filter %>% 
+  group_by(team_home) %>%
+  summarise(Spread_Correct=sum(Actual.difference...spread==0)/
+              length(Actual.difference...spread) * 100) %>% 
+  arrange(desc(Spread_Correct))
+
+# how often does favored team outperform spread (for each team)?
+# comment out group_by for overall, otherwise gives each team's breakdown
+football_data_filter %>% 
+  group_by(team_home) %>% 
+  summarise(Over_Spread=sum(Actual.difference...spread>0)/
+              length(Actual.difference...spread) * 100) %>% 
+  arrange(desc(Over_Spread))
+
+# how often does favored team underperform spread (for each team)?
+# comment out group_by for overall, otherwise gives each team's breakdown
+football_data_filter %>% 
+  group_by(team_home) %>% 
+  summarise(Under_Spread=sum(Actual.difference...spread<0)/
+              length(Actual.difference...spread) * 100) %>% 
+  arrange(desc(Under_Spread))
+
+# combine all into 1
+spread_breakdown = football_data_filter %>% 
+  group_by(team_home) %>% 
+  summarise(Over_Spread=sum(Actual.difference...spread>0)/
+              length(Actual.difference...spread) * 100,
+            Under_Spread=sum(Actual.difference...spread<0)/
+              length(Actual.difference...spread) * 100,
+            Spread_Correct=sum(Actual.difference...spread==0)/
+              length(Actual.difference...spread) * 100) %>% 
+  gather(SpreadType, Percent, Over_Spread:Spread_Correct)
+
+# uncomment png and dev.off() lines to save image to computer
+# png(file="/users/joegyorda/Desktop/QBS181bars.png", width=4000, height=2000, res=350)
+ggplot(data=spread_breakdown,aes(team_home,fill=SpreadType)) + 
+  geom_bar(aes(weight=Percent),position="stack") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylab("Percent") +
+  geom_text(position="stack",aes(team_home,Percent+1,label=round(Percent,1)),size=2) +
+  ggtitle("Accuracy of Spread Across NFL History for Each NFL Team")
+# dev.off()
+```
+
+
+Uses dplyr to create a new variable tracking the yearly average in difference between actual game score and predicted spread, and plots with ggplot along with standard deviation bars. 
+```{r Assess how accurate spread is over time}
+spread_score_diff_over_time = football_data_filter %>% 
+  filter(schedule_season > 1978) %>%  # only superbowl data before this
+  group_by(schedule_season) %>% 
+  summarise(Avg_Diff=mean(Actual.difference...spread),SD_Diff=sd(Actual.difference...spread),
+            Med_Diff=median(Actual.difference...spread))
+
+spread_score_diff_over_time
+
+
+ggplot(data=spread_score_diff_over_time, aes(x=schedule_season, y=Avg_Diff)) +
+  geom_line()+
+  geom_point()+
+  geom_hline(yintercept=0, linetype='dotted', col = 'red') +
+  geom_line(aes(y = (Avg_Diff+SD_Diff)), color="steelblue", linetype="twodash") +
+  geom_line(aes(y = (Avg_Diff-SD_Diff)), color="steelblue", linetype="twodash") +
+  xlab("Season (Year)") + ylab("Average Difference of Spread from Game Score") +
+  ggtitle("Average Accuracy of the Spread per Year for the Entire NFL") 
+```
+
+
+Creates histogram, boxplot, and qqplot of the outcome (actual difference in game score minus predicted spread) to assess normality and check assumptions for regression.
+```{r Assess normality of outcome for regression}
+# uncomment png and dev.off() lines to save image to computer
+# png(file="/users/joegyorda/Desktop/QBS181plots.png", width=4000, height=2000, res=350)
+par(mfrow=c(1,3))
+hist(football_data_filter$Actual.difference...spread, xlab="Actual Difference - Spread", main="")
+boxplot(football_data_filter$Actual.difference...spread, ylab="Actual Difference - Spread")
+qqPlot(football_data_filter$Actual.difference...spread, ylab="Actual Difference - Spread")
+# dev.off()
+# outcome looks normal!
+```
+
+## Section 2 - Linear Mixed Model 
+Uses the lme4 R package to create a linear mixed model as outlined in the comments in the code block below. The model output and confidence intervals for the regression coefficients are shown.
+```{r Implement Mixed Model}
+
+# how important are weather, location, field type, etc to covering the spread? how do 
+# these predictors differ by team?
+
+# the outcome variable is actual difference - spread
+# this variable takes the difference b/w the real game score difference, and 
+# the predicted difference (spread)
+# positive value means favored team outperformed spread, negative means favored
+# team underperformed the spread, and 0 means spread was correct
+
+# only consider instances with full data in predictions
+football_data_complete = football_data_filter[complete.cases(football_data_filter),]
+
+# what's our sample size?
+
+# create the model object using lmer from lme4 library in R
+# includes random intercepts for schedule_season (the year) and team_favorite_id
+#  (the favored team), as well as random slopes of time for each favored team
+mod1 = lmer(`Actual.difference...spread`~ weather_temperature + weather_wind_mph + 
+              weather_humidity + weather_detail + stadium_type + stadium_weather_type
+            + stadium_surface + as.numeric(ELEVATION)  +
+              (1|schedule_season) + (schedule_season|team_favorite_id),
+            data=football_data_complete)
+
+# show model output and r squared 
+summary(mod1) 
+r.squaredGLMM(mod1)
+
+# confidence intervals for each predictor
+sjPlot::plot_model(mod1, title="Predicting Actual Difference - Spread")
+# sjPlot::tab_model(mod1)
+# # sjPlot::plot_residuals(mod1)w
+```
+
+## Section 3 - Network Analysis 
+We use the igraph library in R to create a network of all 32 NFL teams to assess which teams are better at beating the spread against certain teams. This network may yield informative value by providing a cool visualization of which teams historically are the best to bet on (e.g., they are more likely to exceed the spread). 
+```{r Try a social network instead}
+
+# create adjacency matrix, where rows are favored team, columns are unfavored team,
+# entries are number of times the favored team i beat spread against unfavored team j
+# this will be a non-symmetric matrix, as there will be matchups b/w 2 teams
+# where one is favored and when the other is instead favored
+
+# subset data we care about first
+football_data_net = football_data_filter %>% 
+  select(schedule_season, Home.team.abbrev, 
+         Away.team.abbrev, team_favorite_id, 
+         Actual.difference...spread) 
+
+# add column for the nonfavored team too
+football_data_net$team_notfavorite_id = ifelse(football_data_net$team_favorite_id !=
+                                                 football_data_net$Home.team.abbrev,
+                                               football_data_net$Home.team.abbrev,
+                                               football_data_net$Away.team.abbrev)
+
+# get list of unique teams - PICK when spread is 0, we drop these games
+teams = sort(unique(football_data_net$team_favorite_id))
+teams = teams[teams!="PICK"]
+
+# initialize adjacency matric
+teamMatrixSmall = matrix(0,nrow=32,ncol=32)
+rownames(teamMatrixSmall) = colnames(teamMatrixSmall) = teams
+
+# create the adjacency matrix, where the (i,j)th entry corresponds to the percent
+# of the time where team i was favored against team j and outperformed the spread;
+# the opposite interpretation is true for the (j,i)th entry
+for (i in 1:length(teams)) {
+  for (j in 1:length(teams)) {
+    team1 = teams[i]; team2 = teams[j]
+    if (team1 != team2) {
+      favored_dat = football_data_net %>% filter(team_favorite_id==team1,
+                                                 team_notfavorite_id==team2)
+      percent_beat_or_equal = nrow(favored_dat[favored_dat$Actual.difference...spread>=0,]) / 
+        nrow(favored_dat) * 100 
+      teamMatrixSmall[i,j] = percent_beat_or_equal
+    }
+  }
+}
+
+# create graph object
+teamgraph = graph_from_adjacency_matrix(teamMatrixSmall[1:32,1:32], mode='directed', 
+                                        weighted=TRUE,diag=F)
+
+# update graph appearance
+fun_color_range <- colorRampPalette(c("plum", "lightblue", "blue")) 
+my_colors <- fun_color_range(100)  
+E(teamgraph)$color = my_colors
+V(teamgraph)$color = "red"
+V(teamgraph)$label.cex = .8
+coords <- layout_with_gem(teamgraph) 
+
+# plot graph
+# uncomment png and dev.off() lines to save image to computer
+# png(file="/users/joegyorda/Desktop/QBS181net1.png", width=3600, height=3500, res=450)
+plot.igraph(teamgraph,edge.arrow.size=.5, layout = coords)
+image.plot(legend.only=T, zlim=range(1:100), col=my_colors, 
+           legend.lab=list('% of Games Better than Spread'), legend.cex=1)
+# dev.off()
+```
+
+
+This chunk recreates the above network with fewer (11) teams handpicked to provide an easier visualization for interpretation purposes. 
+```{r Create smaller network}
+
+# choose only a few teams and recreate graph
+best_teams = sort(c("ARI","HOU","ATL","BAL","CAR","BUF","MIN","PIT","NE","DAL","DEN"))
+mat = teamMatrixSmall[best_teams,best_teams]
+teamgraph2 = graph_from_adjacency_matrix(mat, mode='directed', 
+                                        weighted=TRUE,diag=F)
+
+# update edge and node colors
+E(teamgraph2)$color = my_colors
+V(teamgraph2)$color = "red"
+V(teamgraph2)$label.cex = .7
+coords2 <- layout_as_star(teamgraph2) # pretty layout 
+
+# uncomment png and dev.off() lines to save image to computer
+# png(file="/users/joegyorda/Desktop/QBS181net2.png", width=2100, height=2000, res=350)
+plot.igraph(teamgraph2,edge.arrow.size=.5,layout =
+              coords2,edge.width=2)
+image.plot(legend.only=T, zlim=range(1:100), col=my_colors,
+           legend.lab=list('% of Games Better than Spread'), legend.cex=1)
+# dev.off()
+
+
+
+# SHOW SUMMARY TABLE OF TOP 5-10 BY OUTDEGREE AND BOTTOM 5-10
+# average percent of the time each team is >= spread
+sort(strength(teamgraph, mode='out')/degree(teamgraph,mode='out'))
+
+# NYJ, MIA, DET are worst teams to bet on
+# BAL, GB, BUF are best teams to bet on!
+
+```
+
+
+## Section 4 - Scrap code for classification model
+Below is classification code for predicting whether a given game was above/below the predicted spread using similar features as the linear mixed model. The results were poor (accuracy < 0.5), so the code is left here to show our work and implementation, but it should remain commented out.
+```{r Machine Learning}
+# library(caret)
+# library(randomForest)
+# library(MLeval)
+# 
+# # Create a new dataset with only the features we care about
+# football_data_ml = football_data_filter
+# football_data_ml = football_data_ml %>% 
+#   select(schedule_season, schedule_week, team_home, team_away, weather_temperature, weather_wind_mph,
+#          weather_humidity, stadium_type, ELEVATION, over_under_line, Actual.difference...spread)
+# 
+# # X1 is 1, X0 is 0, X.1 is -1
+# football_data_ml$Actual.difference...spread = as.factor(ifelse(
+#   football_data_ml$Actual.difference...spread > 0, 1, ifelse(
+#     football_data_ml$Actual.difference...spread==0, 0,-1)))
+# 
+# football_data_ml$Actual.difference.minus.spread = make.names(football_data_ml$Actual.difference...spread)
+# football_data_ml = football_data_ml %>% select(-Actual.difference...spread)
+# 
+# # we'll just drop cases where spread exact
+# football_data_ml = football_data_ml %>% filter(!Actual.difference.minus.spread=='X0')
+# table(football_data_ml$Actual.difference.minus.spread)
+# 
+# # need to do train-test split here!
+# 
+# # set seeds
+# set.seed(10111952)
+# 
+# seeds_1 <- vector(mode="list", length=56) 
+# for(i in 1:55) seeds_1[[i]] <- sample.int(10000,144)
+# seeds_1[[56]] <- sample.int(10000,1)
+# 
+# fitControl_1 <- trainControl(method = "cv",
+#                            number=5,
+#                            classProbs = TRUE,
+#                            savePredictions = TRUE,
+#                            # sampling = "smote",
+#                            seeds = seeds_1)
+# 
+# # capture.output suppresses model output
+# mod_1 <- caret::train(Actual.difference.minus.spread ~ ., data=football_data_ml,
+#                         method = "rf",
+#                         metric = 'Kappa',
+#                         trControl = fitControl_1,
+#                         na.action = na.omit)  # do we need this?
+#   
+# # get model metrics
+# (mod_1_results <- mod_1$results[rownames(mod_1$bestTune),]) 
+# 
+# # perf_mod_1 <- MLeval::evalm(mod_1)
+# sens = MLeval::evalm(mod_1,plots=c(),silent=TRUE)$optres$`Group 1`[1,1] # sensitivity
+# spec = MLeval::evalm(mod_1,plots=c(),silent=TRUE)$optres$`Group 1`[2,1] # specificity 
+# auc = MLeval::evalm(mod_1,plots=c(),silent=TRUE)$optres$`Group 1`[13,1]
+# ci = MLeval::evalm(mod_1,plots=c(),silent=TRUE)$optres$`Group 1`[13,2] # auc CI
+# 
+# # return model performance metrics
+# metrics = c(mod_1_results$Accuracy, sens, spec, auc, ci, mod_1_results$Kappa)
+# 
+# caret::varImp(mod_1)
+
+```
+
+
+
+```{r ML for one season}
+# ## let's just look at one season
+# football_data_ml_2021 = football_data_ml %>% filter(schedule_season==2021)
+# table(football_data_ml_2021$Actual.difference.minus.spread)
+# 
+# football_data_ml_2021 = football_data_ml_2021 %>% select(-schedule_season)
+# 
+# football_data_ml_2021$Actual.difference.minus.spread = as.factor(football_data_ml_2021$Actual.difference.minus.spread)
+# 
+# fitControl_1 <- trainControl(method = "repeatedcv",
+#                            number=5,
+#                            repeats=10,
+#                            classProbs = TRUE,
+#                            savePredictions = TRUE,
+#                            # sampling = "smote",
+#                            seeds = seeds_1)
+# 
+# mod_1 <- caret::train(Actual.difference.minus.spread ~ schedule_week+team_home+team_away+weather_temperature+weather_wind_mph+stadium_type+ELEVATION+over_under_line, data=football_data_ml_2021,
+#                         method = "rf",
+#                         metric = 'Kappa',
+#                         trControl = fitControl_1,
+#                         na.action = na.omit)  # do we need this?
+# 
+#  mod_1
+
+```
+
