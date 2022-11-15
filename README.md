@@ -14,4 +14,4 @@ Tidyverse data cleaning: 181 FP Tidyverse.R
 
 Missing value pipeline: missing_values.Rmd
 
-Advacned Modeling: Joe_QBS_181_Project_Code.Rmd
+Advanced Modeling: Joe_QBS_181_Project_Code.Rmd
