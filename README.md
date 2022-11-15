@@ -1,5 +1,15 @@
 # wranglinghub
-Hi! This is our repository of our final project on the course QBS 181 Data Wrangling. The usage of each file is listed below:
+Hi! This is our repository of our final project on the course QBS 181 Data Wrangling. 
+
+Contributors:
+Anton Hung - xxxxxx
+Joe Gyorda - all the files in the "Joe Code and Documentation" folder
+Bofan (Will) Chen - xxxxx
+Kevin Rouse - xxxx
+Sean Pietrowicz - xxxxx
+
+
+The usage of each file is listed below:
 
 Excel file with data cleaning steps: football_data.xlsx
 
