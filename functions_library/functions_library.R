@@ -94,16 +94,16 @@ plot_stadium_weather <- function(dataset){
 }
 
 plot_weather_status <- function(dataset){
-  bad_weather_days <- filter(dataset, 
-                             stadium_weather_type != 'dome' &
-                               weather_temperature <= 45 &
-                               weather_wind_mph >= 12)
   
   weather_status <- ifelse(dataset$stadium_weather_type != 'dome' &
-                             dataset$weather_temperature <= 45 &
+                             (dataset$weather_temperature <= 45 | 
+                                dataset$weather_temperature >= 67.5) &
                              dataset$weather_wind_mph >= 12, 
-                           'Bad weather', 'Good weather')
-  
+                           'Poor weather', 
+                           ifelse(dataset$stadium_weather_type == 'dome' |
+                                    (dataset$weather_temperature >= 45 & 
+                                       dataset$weather_temperature <= 67.5) &
+                                    dataset$weather_wind_mph <= 6, 'Ideal weather', 'Ok weather'))
   
   data_weather_categorized <- add_column(dataset, weather_status)
   
@@ -119,6 +119,6 @@ plot_weather_status <- function(dataset){
          x = 'Weather status') +
     theme_light() +
     theme(legend.position="none", text = element_text(size=12)) +
-    scale_fill_manual(values = c("#ffffcc", "#a1dab4")) +
-    scale_color_manual(values = c("#a1dab4", "#41b6c4"))
+    scale_fill_manual(values = c("#ffffcc", "#a1dab4", "#41b6c4")) +
+    scale_color_manual(values = c("#a1dab4", "#41b6c4", "#2c7fb8"))
 }

@@ -9,13 +9,14 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r loading functions from a separate r script}
+```{r loading functions from a separate r script (functions library)}
 setwd('/Volumes/GoogleDrive/Mon disque/wrangling/project/wranglinghub')
 source('functions_library/functions_library.R')
 ```
 
-Loading the data
-```{r}
+## Loading the data
+
+```{r reading in the football gambling data}
 library(tidyverse)
 setwd('/Volumes/GoogleDrive/Mon disque/wrangling/project/wranglinghub')
 
@@ -23,24 +24,25 @@ data <- read_csv('football_data.csv')
 head(data)
 ```
 
-MISSING DATA
-```{r}
+## MISSING DATA
+
+```{r priliminary exploration of the NA values}
 summary(data)
 ```
 
-Visualizing which columns have missing data. "weather_detail" has the most missing values by far. This variable contains 8 factors: "DOME", "DOME (Open Roof)", "Fog", "Rain", "Rain | Fog", "Snow", "Snow | Fog", and "Snow | Freezing Rain". All of these factors are related to poor weather, or dome-related changes. Values were not recorded for "nice" weather, which is probably contributing to the large amount of missing values. To proceed, we simply decided not to use this column in our analysis. There were many other weather-related columns available in the dataset. 
+## Visualizing which columns have missing data. "weather_detail" has the most missing values by far. This variable contains 8 factors: "DOME", "DOME (Open Roof)", "Fog", "Rain", "Rain, Fog", "Snow", "Snow, Fog", and "Snow, Freezing Rain". All of these factors are related to poor weather, or dome-related changes. Values were not recorded for "nice" weather, which is probably contributing to the large amount of missing values. To proceed, we simply decided not to use this column in our analysis. There were many other weather-related columns available in the dataset.
 
 ```{r}
-data_missing <- data
+# data_missing <- data
 library(naniar)
 gg_miss_var(data_missing)
 
-# levels(as.factor(data_missing$weather_detail))
+levels(as.factor(data_missing$weather_detail))
 ```
 
 ```{r}
-library(naniar)
-vis_miss(data_missing) 
+# library(naniar)
+# vis_miss(data_missing)
 ```
 
 ```{r}
@@ -54,18 +56,19 @@ mcar_test(data.frame(data[,10:20]))
 ```
 
 ```{r}
-library(naniar)
-
-gg_miss_fct(x = data_missing, fct = schedule_season) 
+# library(naniar)
+# 
+gg_miss_fct(x = data_missing, fct = schedule_season)
 # a lot of missing data related to betting up until near 1978
-# some missing data in the 2023 season, where the authors of the dataset pre-filled data for some games that haven't been played yet.
+# some missing data in the 2023 season, where the authors of the dataset pre-made rows for some games that haven't been played yet.
 
 
 ```
-Evidently, there is a pattern in our missing data. We have 100% missing data in the earlier football seasons. This makes sense because when football first emerged, betting was not yet available
+
+## Evidently, there is a pattern in our missing data. We have 100% missing data in the earlier football seasons. This makes sense because when football first emerged, betting was not yet available.
 
 ```{r}
-pct_miss(data)
+pct_miss(data) # 14.7%
 betting_columns <- c("team_favorite_id",
                      "spread_favorite",
                      "over_under_line",
@@ -73,37 +76,39 @@ betting_columns <- c("team_favorite_id",
                      "Actual difference - spread",
                      "Abs value of spread")
 pct_miss(data[,betting_columns]) # 20.34%
-pct_miss(data[, -which(colnames(data) %in% betting_columns)])
+pct_miss(data[, -which(colnames(data) %in% betting_columns)]) # 13.6%
 ```
 
-Looking at the data in excel, our regular season betting data begins at row 2494 (2493 if we do not include the header).
+## Looking at the data in excel, our regular season betting data begins at row 2494 (2493 if we do not include the header).
 
 ```{r}
 
-pct_miss(data[1:2492,betting_columns])
-pct_miss(data[2493:13248,betting_columns])
-pct_miss(data[13249:nrow(data),betting_columns])
+pct_miss(data[1:2492,betting_columns]) # 99.5% of betting data missing pre-1978
+pct_miss(data[2493:13248,betting_columns]) # 11% of betting data missing between 1978 and present
+pct_miss(data[13249:nrow(data),betting_columns]) # 100% of betting data missing in the future
 
 ```
 
-# WEATHER
+# Analysis of how our weather data affects the accuracy of the spread
 
 ```{r}
+betting_data <- data[2493:13248,] # keep only a subset of the rows
+
+### Weather columns:
 # weather_temperature
 # weather_wind_mph
 # weather_humidity
-
 # stadium_weather_type
+
+### Stadium Surface:
 # stadium_surface
 
+### Outcome (Accuracy of the spread):
 # Actual difference - spread
-
-betting_data <- data[2493:13248,]
-
-
 ```
 
-Playing surface:
+## Playing surface:
+
 ```{r}
 table(as.factor(betting_data$stadium_surface))
 
@@ -118,7 +123,8 @@ plot_stadium_weather(betting_data)
 
 ```
 
-Temperature
+## Temperature
+
 ```{r}
 # weather_temperature
 # weather_wind_mph
@@ -131,27 +137,55 @@ non_domed_stadiums <- filter(betting_data,
                          stadium_weather_type=='moderate' |
                          stadium_weather_type=='warm')
 
-summary(non_domed_stadiums$weather_temperature) # 50,64,72
-summary(non_domed_stadiums$weather_wind_mph) # 0, 7, 11
-summary(non_domed_stadiums$weather_humidity) # 56, 68, 78
+summary(non_domed_stadiums$weather_temperature)
+summary(non_domed_stadiums$weather_wind_mph)
+summary(non_domed_stadiums$weather_humidity)
 # new values (when removing domed stadiums):
 # 45, 57, 67.5
 # 6, 9, 12
 # 57, 69, 78
 
 ggplot(non_domed_stadiums, aes(x=weather_temperature, y=`Actual difference - spread`)) +
-  geom_point()
-
+  geom_point()+
+  geom_smooth(method='lm', formula = y~x) +
+  theme_light()
+cor(non_domed_stadiums$weather_temperature, non_domed_stadiums$`Actual difference - spread`, use= "complete.obs")
+  
 ggplot(non_domed_stadiums, aes(x=weather_wind_mph, y=`Actual difference - spread`)) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method='lm', formula = y~x) +
+  theme_light()
+cor(non_domed_stadiums$weather_wind_mph, non_domed_stadiums$`Actual difference - spread`, use= "complete.obs")
   
 ggplot(non_domed_stadiums, aes(x=weather_humidity, y=`Actual difference - spread`)) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method='lm', formula = y~x) +
+  theme_light()
+cor(non_domed_stadiums$weather_humidity, non_domed_stadiums$`Actual difference - spread`, use= "complete.obs")
 ```
 
-Categorical weather:
+## Categorical weather:
+
 ```{r}
 plot_weather_status(betting_data)
+# weather_status <- ifelse(betting_data$stadium_weather_type != 'dome' &
+#                              (betting_data$weather_temperature <= 45 |
+#                                 betting_data$weather_temperature >= 67.5) &
+#                              betting_data$weather_wind_mph >= 12,
+#                            'Poor weather',
+#                          ifelse(betting_data$stadium_weather_type == 'dome' |
+#                                                    (betting_data$weather_temperature >= 45 &
+#                                 betting_data$weather_temperature <= 67.5) &
+#                                                    betting_data$weather_wind_mph <= 6, 'Ideal weather', 'Ok weather'))
+# table(weather_status)
+```
 
+## Elevation:
+```{r}
+
+  
+ggplot(betting_data, aes(x=ELEVATION, y=`Actual difference - spread`)) +
+  geom_point()+
+  theme_light()
 ```
 
