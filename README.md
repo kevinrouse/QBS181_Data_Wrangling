@@ -15,7 +15,7 @@ Sean Pietrowicz (sean.w.pietrowicz.gr@dartmouth.edu) - webscraping.Rmd and weath
 --------------------------------------------------------------------------------------------------------------------------------
 ### Installation/Code Pipeline
 
-#### Excel cleaning
+#### Excel Cleaning
 Excel file with data cleaning steps: football_data.xlsx
 Brief Overview (Look at Excel Sheet metadata sheet for further detail):
 Added abbreviations to home, away team to match up with spread team formatting 
@@ -33,7 +33,7 @@ actual total points scored in the game and the predicted
 Merged stadium and team data onto main sheet
 
 
-#### Tidyverse cleaning
+#### Tidyverse Cleaning
 The tideverse cleaning basically reapeat the steps of Excel data cleaning but in R using the package tidyverse. Some functions are used: rename, ifelse, left_join. The detailed process is listed in the R and Rmd file.
 
 CSV file that is used for tidyverse data cleaning, data analysis and modeling: football_data.csv, nfl_stadiums.csv, 
@@ -70,7 +70,7 @@ All code and documentation can be found in the folder "Joe Code and Documentatio
 
 Download the "Joe_QBS_181_Project_Code.rmd" file to your local computer along with the cleaned dataset titled 'Merged_Stadium.csv' which was extracted from the final step in Kevin's Excel workbook. The code walks through some preliminary data cleaning, along with implementing a linear mixed model and a network analysis.
 
-#### Web scraping
+#### Web Scraping
 Web scraping documentation and code can be found within the file "webscraping.Rmd" which contains all of the information for pulling weather data from nflweather.com as well as information about how to merge this scraped data into the main project dataset. 
 
 This script runs alongside the file "weather_glossary.xlsx" which contains our team's ratings for weather severity and is used for the preliminary linear mixed-effects model that employs this scraped weather data to determine if weather conditions are a factor in spread accuracy.
