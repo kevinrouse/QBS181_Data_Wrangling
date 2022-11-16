@@ -10,7 +10,7 @@ Bofan (Will) Chen (bofan.chen.gr@dartmouth.edu) - xxxxx
 
 Kevin Rouse (kevin.j.rouse.gr@dartmouth.edu) - all the files in the "Kevin's Excel" folder
 
-Sean Pietrowicz (email) - xxxxx
+Sean Pietrowicz (sean.w.pietrowicz.gr@dartmouth.edu) - webscraping.Rmd and weather_glossary.xlsx
 
 --------------------------------------------------------------------------------------------------------------------------------
 ### Installation/Code Pipeline
