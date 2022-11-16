@@ -2,7 +2,7 @@
 Hi! This is our repository of our final project on the course QBS 181 Data Wrangling, taught by Dr. Carly Bobak in the Fall of 2022. 
 
 ### Contributors:
-Anton Hung (email) - xxxxxx
+Anton Hung (email) - Anton.M.Hung.GR@dartmouth.edu - functions library + Anton folder
 
 Joe Gyorda (joseph.a.gyorda.gr@dartmouth.edu) - all the files in the "Joe Code and Documentation" folder
 
@@ -34,19 +34,31 @@ Merged stadium and team data onto main sheet
 
 
 #### Tidyverse cleaning
-Anton and will to fill
+will to fill
 
 CSV file that is used for tidyverse data cleaning, data analysis and modeling: football_data.csv, nfl_stadiums.csv, 
 nfl_teams.csv, Merged_Stadium.csv
 
 #### Preliminary Analyses
-Functions: functions_library
+Functions: functions_library.R
+For our project, we chose to include a functions library, a separate R script containing all the functions in our code. This is useful because it reduces the amount of copying and pasting of our code. It also makes the document look more presentable when we aren’t taking up space with trivial bits of code
+- All the code from missing_values.rmd (found in Anton's folder) was converted into functions, and these functions were moved to the functions_library.R
+- The "source" method in R is used to import the function library into any r files that need it.
+- inside the functions_library is also an early version of Joe's code, that was adapted to take advatange of the functions library.
 
 Natural language processing (wordcloud): 181 FP Word Cloud.R
 
 Tidyverse data cleaning: 181 FP Tidyverse.R
 
-Missing value pipeline: missing_values.Rmd
+Missing value pipeline: Anton_documentation.Rmd (pages 1-4)
+Almost every dataset will be missing some data. This section covers how we explored where we are missing data and how we handled it.
+The library “naniar” contains many methods for visualizing which columns have missing data.
+Later, in the web scraping section of the documentation, we describe how we imputed data into a new column to replace this “weather detail” column.
+Also in this section, we identified that all of our meaningful betting data is found between the years 1978-present, and we chose not to include data outside of this range.
+
+The effect of weather variables on the accuracy of the spread: Anton_documentation.Rmd (pages 5-end)
+- This section demonstrates how we analyzed the weather data in our dataset to determine its effect on the accuracy of the spread.
+- This is achieved by creating visualizations of our weather variables: temperature, wind, and humidity. These variables are compared against the accuracy of the spread.
 
 #### Advanced Modeling
 All code and documentation can be found in the folder "Joe Code and Documentation" which contains and RMD and knitted PDF of this document.

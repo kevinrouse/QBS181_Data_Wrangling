@@ -1,6 +1,6 @@
 ---
-title: "Joe QBS181 Project Code"
-author: "Joe Gyorda"
+title: "An earlier version of Joe's code, adapted to take advantage of the functions library script"
+author: "Anton Hung"
 date: "2022-11-03"
 output: pdf_document
 ---
@@ -89,34 +89,34 @@ assess_normality(football_data_filter)
 # team underperformed the spread, and 0 means spread was correct
 
 # makes it easier to generate predictions later
-football_data_complete = football_data_filter[complete.cases(football_data_filter),]
-
-mod1 = lmer(`Actual.difference...spread`~ weather_temperature + weather_wind_mph + 
-              weather_humidity + schedule_season + schedule_week + weather_detail + schedule_playoff +
-              stadium_type + stadium_weather_type + stadium_surface + Abs.value.of.spread 
-            + as.numeric(ELEVATION) +
-              (1|schedule_season) + (schedule_season|team_favorite_id),
-            data=football_data_complete)
-
-sum1 = summary(mod1)
-sum1
-r_sq = r.squaredGLMM(mod1)
-
-# sum1$coefficients
-random_effects = ranef(mod1)
-
-
-plot(mod1)
-
-library(sjPlot)
-sjPlot::plot_model(mod1)
-sjPlot::tab_model(mod1)
-# sjPlot::plot_residuals(mod1)
-
-preds = predict(mod1) 
-
-plot(football_data_complete$Actual.difference...spread, preds)
-summary(lm(football_data_complete$Actual.difference...spread~preds))
+# football_data_complete = football_data_filter[complete.cases(football_data_filter),]
+# 
+# mod1 = lmer(`Actual.difference...spread`~ weather_temperature + weather_wind_mph + 
+#               weather_humidity + schedule_season + schedule_week + weather_detail + schedule_playoff +
+#               stadium_type + stadium_weather_type + stadium_surface + Abs.value.of.spread 
+#             + as.numeric(ELEVATION) +
+#               (1|schedule_season) + (schedule_season|team_favorite_id),
+#             data=football_data_complete)
+# 
+# sum1 = summary(mod1)
+# sum1
+# r_sq = r.squaredGLMM(mod1)
+# 
+# # sum1$coefficients
+# random_effects = ranef(mod1)
+# 
+# 
+# plot(mod1)
+# 
+# library(sjPlot)
+# sjPlot::plot_model(mod1)
+# sjPlot::tab_model(mod1)
+# # sjPlot::plot_residuals(mod1)
+# 
+# preds = predict(mod1) 
+# 
+# plot(football_data_complete$Actual.difference...spread, preds)
+# summary(lm(football_data_complete$Actual.difference...spread~preds))
 ```
 
 
