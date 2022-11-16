@@ -39,7 +39,7 @@ The tideverse cleaning basically reapeat the steps of Excel data cleaning but in
 CSV file that is used for tidyverse data cleaning, data analysis and modeling: football_data.csv, nfl_stadiums.csv, 
 nfl_teams.csv, Merged_Stadium.csv
 
-### Word Cloud and Exploratory Data Analysis
+#### Word Cloud and Exploratory Data Analysis
 The world cloud, a method of natural language processing, is used to visualize the variables containing text, including team_home, team_away, stadium and stadium_address. For stadium, we remove the words that are equal to or similiar to stadium, in order to analyze the descriptive word of the stadium, and the stadium.csv file is cleaned in Excel and used for the world cloud. The steps are showed in the Rmd file. 
 
 In the exploratory data analysis (EDA), we conduct some visualizations using Tableau to further explore the dataset in terms of team, stadium and weather. The visualizations and dashboards are displayed in the EDA - Tableau.twb file.
