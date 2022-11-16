@@ -6,7 +6,7 @@ Anton Hung (email) - Anton.M.Hung.GR@dartmouth.edu - functions library + Anton f
 
 Joe Gyorda (joseph.a.gyorda.gr@dartmouth.edu) - all the files in the "Joe Code and Documentation" folder
 
-Bofan (Will) Chen (bofan.chen.gr@dartmouth.edu) - xxxxx
+Bofan (Will) Chen (bofan.chen.gr@dartmouth.edu) - all the files in the "Will" folder
 
 Kevin Rouse (kevin.j.rouse.gr@dartmouth.edu) - all the files in the "Kevin's Excel" folder
 
