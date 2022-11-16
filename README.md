@@ -16,10 +16,8 @@ Sean Pietrowicz (email) - xxxxx
 ### Installation/Code Pipeline
 
 #### Excel cleaning
-Kevin to fill
-
 Excel file with data cleaning steps: football_data.xlsx
-Brief Overview(Look at Excel Sheet metadata sheet for further detail):
+Brief Overview (Look at Excel Sheet metadata sheet for further detail):
 Added abbreviations to home, away team to match up with spread team formatting 
 (used VLOOKUPs)
 
@@ -51,8 +49,9 @@ Tidyverse data cleaning: 181 FP Tidyverse.R
 Missing value pipeline: missing_values.Rmd
 
 #### Advanced Modeling
-Joe to add description
-Joe_QBS_181_Project_Code.Rmd
+All code and documentation can be found in the folder "Joe Code and Documentation" which contains and RMD and knitted PDF of this document.
+
+Download the "Joe_QBS_181_Project_Code.rmd" file to your local computer along with the cleaned dataset titled 'Merged_Stadium.csv' which was extracted from the final step in Kevin's Excel workbook. The code walks through some preliminary data cleaning, along with implementing a linear mixed model and a network analysis.
 
 #### Web scraping
 Sean to fill
