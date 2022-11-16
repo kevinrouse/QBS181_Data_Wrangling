@@ -54,4 +54,6 @@ All code and documentation can be found in the folder "Joe Code and Documentatio
 Download the "Joe_QBS_181_Project_Code.rmd" file to your local computer along with the cleaned dataset titled 'Merged_Stadium.csv' which was extracted from the final step in Kevin's Excel workbook. The code walks through some preliminary data cleaning, along with implementing a linear mixed model and a network analysis.
 
 #### Web scraping
-Sean to fill
+Web scraping documentation and code can be found within the file "webscraping.Rmd" which contains all of the information for pulling weather data from nflweather.com as well as information about how to merge this scraped data into the main project dataset. 
+
+This script runs alongside the file "weather_glossary.xlsx" which contains our team's ratings for weather severity and is used for the preliminary linear mixed-effects model that employs this scraped weather data to determine if weather conditions are a factor in spread accuracy.
