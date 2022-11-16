@@ -1,0 +1,137 @@
+---
+title: "Webscraping QBS181"
+author: "Sean Pietrowicz"
+date: "2022-11-08"
+output: pdf_document
+---
+
+# Webscraping Script
+
+The objective of this script is to compile a table of weather data (both qualitative and quantitative) from the website nflweather.com and then clean + merge this data with the rest of our football spread data.
+
+## Packages:
+
+These are the packages required to run webscraping and data manipulation scripts:
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(stringr)
+library(rvest)
+library(janitor)
+library(glue)
+library(data.table)
+library(purrr)
+library(dplyr)
+library(lme4)
+library(car)
+library(MuMIn)
+library(ggplot2)
+library(sjPlot)
+```
+
+## Functions:
+
+* url_generator: Input a series of year and week numbers, outputs a list of nflweather urls for each of these inputs.
+* weather_scraper: Input a url, outputs a table of that season year + week, the temperature, wind and weather. This table is obtained by pulling this information from nflweather.com and then uses regex to separate and isolate each bit of information.
+
+```{r functions}
+
+url_generator <- function(year, week) {
+  full_url <- glue::glue("http://nflweather.com/en/week/{year}/{week}/")
+}
+
+weather_scraper <- function(webpage_url) {
+  webpage_url %>% 
+    read_html() %>% 
+    html_table() %>%
+    .[[1]] %>% 
+    clean_names() %>%
+    select(home, away, forecast, wind) %>%
+    mutate(season = webpage_url %>% str_sub(start= 31, end = 34) %>% as.numeric(),
+           week = webpage_url %>% str_replace_all(".*\\-", "") %>% str_sub(start = -3, end = -2),
+           temperature = ifelse(forecast == 'DOME', 71, str_replace_all(forecast, "f.*$", "")) %>% as.numeric(),
+           wind = ifelse(forecast == 'DOME', 0, str_replace_all(wind, "m.*$", "")) %>% as.numeric(),
+           weather = forecast %>% str_replace_all("[0-9]{1,3}f *", "")) %>%
+    select(-forecast) %>%
+    mutate(week = replace(week, week == "nd", "Wildcard"),
+           week = replace(week, week == "ps", "Conference"),
+           week = replace(week, week == "fs", "Division"),
+           week = replace(week, week == "wl", "Superbowl"))
+}
+
+```
+
+## Scraping the data:
+
+The weather nflweather.com has date ranges from 2009 onward, but its 2009 and 2010 urls were too haphazardly constructed to cleanly parse. The week ranges also include postseason games, and URLs for 2019, 2020 and 2021 had to be slightly modified for the conference championship data. This section of code compiles the weather_data table, which will be merged with the rest of the data in the next section.
+
+```{r scraping}
+
+year_range <- c(2011:2021)
+week_range <- c(paste0("week-",1:17), "wildcard-weekend", "divisional-playoffs", "conf-championships", "superbowl")
+
+schedule <- crossing(year = year_range, week = week_range) %>%
+  mutate(week = ifelse(test = year %in% c(2019:2021) & week == "conf-championships", 
+                       yes = "%20conf-championships", 
+                       no = week))
+
+url_list <- pmap(schedule, url_generator)
+weather_data <- map_df(url_list, weather_scraper)
+
+```
+
+## Merging the data:
+
+To merge the data, we joined by season, week, home team and away team. This was done by matching mascot names for this date range due to how the data was labeled on each data frame (also necessitating the added step for Washington due to their mascot update).
+
+```{r merging}
+
+football_data <- read.csv("/Users/seanpietrowicz/Desktop/wranglinghub/Merged_Stadium.csv") %>%
+#football_data <- read_excel("/Users/seanpietrowicz/Desktop/wranglinghub/football_data.xlsx") %>% 
+  mutate(home_mascot = team_home %>% str_replace_all("^.* ", ""), .after = team_home) %>%
+  mutate(away_mascot = team_away %>% str_replace_all("^.* ", ""), .after = team_away) %>%
+  mutate_at(c("home_mascot", "away_mascot"), ~str_replace_all(., "Redskins", "Washington")) %>%
+  mutate_at(c("home_mascot", "away_mascot"), ~str_replace_all(., "Team", "Washington"))
+
+merged_data <- football_data %>%
+  left_join(weather_data, 
+            by = c("schedule_season" = "season", "schedule_week" = "week", 
+                   "home_mascot" = "home", "away_mascot" = "away")) %>%
+  mutate(weather_detail = coalesce(weather_detail,weather),
+         weather_temperature = coalesce(weather_temperature,temperature),
+         weather_wind_mph = coalesce(weather_wind_mph,wind))
+
+```
+
+## Modeling the data:
+
+This model was adapted from an earlier script. It is a linear mixed-effects model that inputs the merged "stadium" football data with this qualitative weather data, using the manually-inputted rating for how severe a given forecast is in place of the previous (and woefully incomplete) "weather detail" column. The output reflects an increase in the R squared value for this model.
+
+```{r model}
+
+weather_glossary <- read_excel("/Users/seanpietrowicz/Desktop/wranglinghub/weather_glossary.xlsx") %>%
+  mutate(weather_description = weather_description %>% str_replace_all("\\s+", " ")) %>%
+  mutate(rating = as.factor(rating))
+
+model_data <- merged_data %>% 
+  left_join(weather_glossary, by = c("weather" = "weather_description")) %>%
+  filter(schedule_season %>% between(2011, 2021))
+
+#complete_data <- read.csv("/Users/seanpietrowicz/Desktop/wranglinghub/Merged_Stadium.csv")
+
+mod1 = lmer(`Actual.difference...spread`~ weather_temperature + weather_wind_mph + 
+              weather_humidity + rating + stadium_type + stadium_weather_type
+            + stadium_surface + as.numeric(ELEVATION)  +
+              (1|schedule_season) + (schedule_season|team_favorite_id),
+            data=model_data)
+
+summary(mod1)
+r.squaredGLMM(mod1)
+
+random_effects = ranef(mod1)
+sjPlot::plot_model(mod1, title="Predicting Actual Difference - Spread")
+
+```
+
+
