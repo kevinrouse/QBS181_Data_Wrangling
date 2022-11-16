@@ -34,10 +34,15 @@ Merged stadium and team data onto main sheet
 
 
 #### Tidyverse cleaning
-will to fill
+The tideverse cleaning basically reapeat the steps of Excel data cleaning but in R using the package tidyverse. Some functions are used: rename, ifelse, left_join. The detailed process is listed in the R and Rmd file.
 
 CSV file that is used for tidyverse data cleaning, data analysis and modeling: football_data.csv, nfl_stadiums.csv, 
 nfl_teams.csv, Merged_Stadium.csv
+
+### Word Cloud and Exploratory Data Analysis
+The world cloud, a method of natural language processing, is used to visualize the variables containing text, including team_home, team_away, stadium and stadium_address. For stadium, we remove the words that are equal to or similiar to stadium, in order to analyze the descriptive word of the stadium, and the stadium.csv file is cleaned in Excel and used for the world cloud. The steps are showed in the Rmd file. 
+
+In the exploratory data analysis (EDA), we conduct some visualizations using Tableau to further explore the dataset in terms of team, stadium and weather. The visualizations and dashboards are displayed in the EDA - Tableau.twb file.
 
 #### Preliminary Analyses
 Functions: functions_library.R
