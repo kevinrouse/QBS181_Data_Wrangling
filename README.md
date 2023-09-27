@@ -2,15 +2,15 @@
 Hi! This is our repository of our final project on the course QBS 181 Data Wrangling, taught by Dr. Carly Bobak in the Fall of 2022. 
 
 ### Contributors:
-Anton Hung (email) - Anton.M.Hung.GR@dartmouth.edu - functions library + Anton folder
+Anton Hung (email) - Anton.M.Hung.GR@dartmouth.edu 
 
-Joe Gyorda (joseph.a.gyorda.gr@dartmouth.edu) - all the files in the "Joe Code and Documentation" folder
+Joe Gyorda (joseph.a.gyorda.gr@dartmouth.edu)\
 
-Bofan (Will) Chen (bofan.chen.gr@dartmouth.edu) - all the files in the "Will" folder
+Bofan (Will) Chen (bofan.chen.gr@dartmouth.edu)
 
-Kevin Rouse (kevin.j.rouse.gr@dartmouth.edu) - all the files in the "Kevin's Excel" folder
+Kevin Rouse (kevin.j.rouse.gr@dartmouth.edu) 
 
-Sean Pietrowicz (sean.w.pietrowicz.gr@dartmouth.edu) - webscraping.Rmd and weather_glossary.xlsx
+Sean Pietrowicz (sean.w.pietrowicz.gr@dartmouth.edu)
 
 --------------------------------------------------------------------------------------------------------------------------------
 ### Installation/Code Pipeline
